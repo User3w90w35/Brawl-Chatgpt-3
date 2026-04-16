@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Brawl Lite</title>
+<style>
+body { margin:0; font-family:Arial; background:#111; color:white; text-align:center; }
+button { padding:10px 20px; margin:10px; font-size:18px; cursor:pointer; }
+canvas { display:none; background:#000; }
+</style>
+</head>
+<body>
+
+<h1>🔥 BRAWL LITE 🔥</h1>
+
+<div id="menu">
+    <p>🏆 Кубки: <span id="trophies">0</span></p>
+    <button onclick="startGame()">Играть</button>
+    <button onclick="showBrawlers()">Бравлеры</button>
+</div>
+
+<div id="brawlers" style="display:none;">
+    <h2>Выбор бравлера</h2>
+    <button onclick="selectBrawler('fast')">⚡ Быстрый</button>
+    <button onclick="selectBrawler('tank')">🛡 Танк</button>
+    <button onclick="selectBrawler('sniper')">🎯 Снайпер</button>
+    <br>
+    <button onclick="backMenu()">Назад</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+let trophies = 0;
+let currentBrawler = "fast";
+
+function showBrawlers(){
+    menu.style.display="none";
+    brawlers.style.display="block";
+}
+
+function backMenu(){
+    brawlers.style.display="none";
+    menu.style.display="block";
+}
+
+function selectBrawler(type){
+    currentBrawler = type;
+    alert("Выбран: " + type);
+}
+
+// запуск игры
+function startGame(){
+    menu.style.display="none";
+    canvas.style.display="block";
+    initGame();
+}
+
+// настройки бравлеров
+function getStats(){
+    if(currentBrawler==="fast") return {speed:5,hp:80,bullet:8};
+    if(currentBrawler==="tank") return {speed:3,hp:150,bullet:6};
+    if(currentBrawler==="sniper") return {speed:4,hp:70,bullet:12};
+}
+
+// ИГРА
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let player, bullets, enemies;
+
+function initGame(){
+    let stats = getStats();
+
+    player = {
+        x: canvas.width/2,
+        y: canvas.height/2,
+        size:20,
+        speed: stats.speed,
+        hp: stats.hp,
+        bulletSpeed: stats.bullet
+    };
+
+    bullets = [];
+    enemies = [];
+
+    setInterval(spawnEnemy,1500);
+
+    loop();
+}
+
+let keys = {};
+document.addEventListener("keydown",e=>keys[e.key]=true);
+document.addEventListener("keyup",e=>keys[e.key]=false);
+
+canvas.addEventListener("click", e=>{
+    let angle = Math.atan2(e.clientY-player.y,e.clientX-player.x);
+    bullets.push({
+        x:player.x,
+        y:player.y,
+        dx:Math.cos(angle)*player.bulletSpeed,
+        dy:Math.sin(angle)*player.bulletSpeed,
+        size:5
+    });
+});
+
+function spawnEnemy(){
+    enemies.push({
+        x:Math.random()*canvas.width,
+        y:Math.random()*canvas.height,
+        size:20,
+        speed:1.5
+    });
+}
+
+function update(){
+    if(keys["w"]) player.y-=player.speed;
+    if(keys["s"]) player.y+=player.speed;
+    if(keys["a"]) player.x-=player.speed;
+    if(keys["d"]) player.x+=player.speed;
+
+    bullets.forEach((b,i)=>{
+        b.x+=b.dx; b.y+=b.dy;
+        if(b.x<0||b.y<0||b.x>canvas.width||b.y>canvas.height){
+            bullets.splice(i,1);
+        }
+    });
+
+    enemies.forEach((e,ei)=>{
+        let angle=Math.atan2(player.y-e.y,player.x-e.x);
+        e.x+=Math.cos(angle)*e.speed;
+        e.y+=Math.sin(angle)*e.speed;
+
+        let dist=Math.hypot(player.x-e.x,player.y-e.y);
+        if(dist<20){
+            player.hp-=1;
+        }
+
+        bullets.forEach((b,bi)=>{
+            let d=Math.hypot(b.x-e.x,b.y-e.y);
+            if(d<20){
+                enemies.splice(ei,1);
+                bullets.splice(bi,1);
+                trophies++;
+                document.getElementById("trophies").innerText=trophies;
+            }
+        });
+    });
+
+    if(player.hp<=0){
+        alert("Поражение! Кубки: "+trophies);
+        location.reload();
+    }
+}
+
+function draw(){
+    ctx.fillStyle="#000";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle="lime";
+    ctx.beginPath();
+    ctx.arc(player.x,player.y,20,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="yellow";
+    bullets.forEach(b=>{
+        ctx.beginPath();
+        ctx.arc(b.x,b.y,5,0,Math.PI*2);
+        ctx.fill();
+    });
+
+    ctx.fillStyle="red";
+    enemies.forEach(e=>{
+        ctx.beginPath();
+        ctx.arc(e.x,e.y,20,0,Math.PI*2);
+        ctx.fill();
+    });
+}
+
+function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
